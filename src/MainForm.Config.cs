@@ -14,10 +14,19 @@ namespace Dungeons2SkinLoader
         void SaveConfig()
         {
             var lines = new List<string> { "layers=" + (layers ? 1 : 0) };
-            foreach (var s in slots)
-                lines.Add(string.Join("|", s.HeroKey, s.ImagePath, s.Mode.ToString(), string.Join(" ", s.Eyes.Select(e => (e / 8) + "." + (e % 8))), s.Face != null ? s.Face.Serialize() : "", s.LidColor.HasValue ? "lid=" + s.LidColor.Value.ToString("x6") + (s.LidColor2.HasValue ? "," + s.LidColor2.Value.ToString("x6") : "") : ""));
+            foreach (var s in slots) lines.Add(SerializeSlot(s));
             File.WriteAllLines(ConfigPath, lines);
             File.WriteAllText(Path.Combine(App.DataDir, "gamefolder.txt"), gameDir ?? "");
+        }
+
+        static string SerializeSlot(SkinSlot s)
+        {
+            var eyes = string.Join(" ", s.Eyes.Select(e => (e / 8) + "." + (e % 8)));
+            var face = s.Face != null ? s.Face.Serialize() : "";
+            var lid = s.LidColor.HasValue
+                ? "lid=" + s.LidColor.Value.ToString("x6") + (s.LidColor2.HasValue ? "," + s.LidColor2.Value.ToString("x6") : "")
+                : "";
+            return string.Join("|", s.HeroKey, s.ImagePath, s.Mode.ToString(), eyes, face, lid);
         }
 
         void LoadConfig()
@@ -27,23 +36,39 @@ namespace Dungeons2SkinLoader
                 foreach (var l in File.ReadAllLines(ConfigPath))
                 {
                     if (l.StartsWith("layers=")) { layers = l.EndsWith("1"); continue; }
-                    var p = l.Split('|'); if (p.Length < 5 || !File.Exists(p[2])) continue;
-                    var s = new SkinSlot { HeroKey = p[0] + "|" + p[1], ImagePath = p[2] };
-                    FaceMode m; if (Enum.TryParse(p[3], out m)) s.Mode = m;
-                    if (p.Length > 5) s.Face = GameFace.Parse(p[5]);
-                    if (p.Length > 6 && p[6].StartsWith("lid="))
-                    {
-                        var lc = p[6].Substring(4).Split(',');
-                        s.LidColor = Convert.ToInt32(lc[0], 16);
-                        if (lc.Length > 1) s.LidColor2 = Convert.ToInt32(lc[1], 16);
-                    }
-                    if (p[4].Trim() != "") s.Eyes = p[4].Split(' ').Select(e => int.Parse(e.Split('.')[0]) * 8 + int.Parse(e.Split('.')[1])).ToList();
-                    if (gd.FindHero(s.HeroKey) != null) slots.Add(s);
+                    var s = ParseSlotLine(l);
+                    if (s != null) slots.Add(s);
                 }
             layersBox.Checked = layers;
+
             var gf = Path.Combine(App.DataDir, "gamefolder.txt");
-            if (File.Exists(gf)) { var g = File.ReadAllText(gf).Trim(); if (g != "" && Game.IsGame(g)) gameDir = g; }
+            if (File.Exists(gf))
+            {
+                var g = File.ReadAllText(gf).Trim();
+                if (g != "" && Game.IsGame(g)) gameDir = g;
+            }
             loading = false;
+        }
+
+        SkinSlot ParseSlotLine(string line)
+        {
+            var p = line.Split('|');
+            if (p.Length < 5 || !File.Exists(p[2])) return null;
+
+            var s = new SkinSlot { HeroKey = p[0] + "|" + p[1], ImagePath = p[2] };
+            FaceMode m;
+            if (Enum.TryParse(p[3], out m)) s.Mode = m;
+            if (p.Length > 5) s.Face = GameFace.Parse(p[5]);
+            if (p.Length > 6 && p[6].StartsWith("lid="))
+            {
+                var lc = p[6].Substring(4).Split(',');
+                s.LidColor = Convert.ToInt32(lc[0], 16);
+                if (lc.Length > 1) s.LidColor2 = Convert.ToInt32(lc[1], 16);
+            }
+            if (p[4].Trim() != "")
+                s.Eyes = p[4].Split(' ').Select(e => int.Parse(e.Split('.')[0]) * 8 + int.Parse(e.Split('.')[1])).ToList();
+
+            return gd.FindHero(s.HeroKey) != null ? s : null;
         }
     }
 }

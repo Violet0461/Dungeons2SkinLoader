@@ -10,12 +10,26 @@ namespace Dungeons2SkinLoader
     /// <summary>Right-aligned status line: coloured dots between the parts, text in blue.</summary>
     public class StatusLine : Control
     {
-        public string[] Parts = new string[0]; public Color Dot = Color.FromArgb(88, 206, 110), Ink = Theme.Accent;
-        public StatusLine() { SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true); BackColor = Color.Transparent; }
-        public void Set(Color dot, params string[] parts) { Dot = dot; Parts = parts; Invalidate(); }
+        public string[] Parts = new string[0];
+        public Color Dot = Color.FromArgb(88, 206, 110), Ink = Theme.Accent;
+
+        public StatusLine()
+        {
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
+            BackColor = Color.Transparent;
+        }
+
+        public void Set(Color dot, params string[] parts)
+        {
+            Dot = dot;
+            Parts = parts;
+            Invalidate();
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
-            var g = e.Graphics; g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+            var g = e.Graphics;
+            g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
             // build: ● part · part   (measured right to left so it hugs the right edge)
             var pieces = new List<Tuple<string, Color>>();
             pieces.Add(Tuple.Create("■", Dot));
